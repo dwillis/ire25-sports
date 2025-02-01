@@ -2,11 +2,10 @@
 
 ### THIS REPO: https://github.com/dwillis/nicar24-sports
 
-Materials for this NICAR 2024 session.
+Materials for this NICAR 2025 session.
 
 * Matt Waite, University of Nebraska
 * Derek Willis, University of Maryland
-* [Sapna Bansil](https://cnsmaryland.org/youth-football/), University of Maryland [slides](https://docs.google.com/presentation/d/1Up9vq7Z_Su7cKKwasnX3IcOts4xr7B2OlgTZGNMqvCs/edit#slide=id.g2c0d3838e6d_2_181)
 
 ### Resources
 
