@@ -49,8 +49,6 @@ Most of this is just high-level stuff taken from various websites, but there are
 * [For WVU, There’s No Place Like Home](https://herhoopstats.substack.com/p/for-wvu-theres-no-place-like-home)
 
 * [Three statistics that show why the Lynx can be playoff contenders](https://www.startribune.com/lynx-wnba-championship-contenders-assists-three-point-percentage-struggles-in-paint/601111960?utm_source=gift)
-* 
 * [We plotted every hit Joe Mauer collected in his 15-year career](https://strib.gift/l2if57f85)
-
 * [Minnesota is national leader in girls sports participation](https://www.startribune.com/minnesota-is-national-leader-in-girls-high-school-sports-participation/600182377?utm_source=gift)
-* 
+* [Gophers NIL deals](https://www.startribune.com/gophers-nil-deals-minnesota-social-media-women-football-dinkytown-athletes/600355016)
