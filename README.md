@@ -5,6 +5,7 @@
 Materials for this NICAR 2025 session.
 
 * Matt Waite, University of Nebraska
+* MaryJo Webster, Minnesota Star Tribune
 * Derek Willis, University of Maryland
 
 ### Resources
