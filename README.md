@@ -54,4 +54,4 @@ Most of this is just high-level stuff taken from various websites, but there are
       Source: Purchased from [Sports Info Solutions](https://www.sportsinfosolutions.com/research-analysis/)  Other websites didn't go far enough back in time. 
 * [Minnesota is national leader in girls sports participation](https://www.startribune.com/minnesota-is-national-leader-in-girls-high-school-sports-participation/600182377?utm_source=gift)
       Source: [Federation of State High School Associations](https://www.nfhs.org/)
-* [Gophers NIL deals](https://www.startribune.com/gophers-nil-deals-minnesota-social-media-women-football-dinkytown-athletes/600355016?utm_source=gift)
+* [Gophers NIL deals](https://www.startribune.com/gophers-nil-deals-minnesota-social-media-women-football-dinkytown-athletes/600355016?utm_source=gift).  [Example of NIL data](https://docs.google.com/spreadsheets/d/1hmeMj2jM7DSnjfJOsjtl_axHDYZivG7PO1ebx4C5adE/edit?usp=sharing)
