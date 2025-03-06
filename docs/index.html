@@ -11,7 +11,7 @@
 
 
 
-<title>nicar24_wbb.knit</title>
+<title>nicar25_wbb.knit</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -297,23 +297,17 @@ overflow-y: auto;
 border: 1px solid #ddd;
 border-radius: 4px;
 }
-.tabset-dropdown > .nav-tabs > li.active:before {
-content: "";
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+content: "\e259";
 font-family: 'Glyphicons Halflings';
 display: inline-block;
 padding: 10px;
 border-right: 1px solid #ddd;
 }
 .tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
-content: "";
-border: none;
-}
-.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
-content: "";
+content: "\e258";
 font-family: 'Glyphicons Halflings';
-display: inline-block;
-padding: 10px;
-border-right: 1px solid #ddd;
+border: none;
 }
 .tabset-dropdown > .nav-tabs > li.active {
 display: block;
@@ -360,31 +354,34 @@ display: none;
 
 <div id="bringing-data-analysis-to-the-sports-section" class="section level1">
 <h1>Bringing Data Analysis to the Sports Section</h1>
-<div id="nicar-2024" class="section level2">
-<h2>NICAR 2024</h2>
+<div id="nicar-2025" class="section level2">
+<h2>NICAR 2025</h2>
 <div id="matt-waite-university-of-nebraska" class="section level4">
 <h4>Matt Waite, University of Nebraska</h4>
+</div>
+<div id="maryjo-webster-minnesota-star-tribune" class="section level4">
+<h4>MaryJo Webster, Minnesota Star Tribune</h4>
 </div>
 <div id="derek-willis-university-of-maryland" class="section level4">
 <h4>Derek Willis, University of Maryland</h4>
 </div>
-<div id="httpsgithub.comdwillisnicar24-sports" class="section level4">
-<h4><a href="https://github.com/dwillis/nicar24-sports" class="uri">https://github.com/dwillis/nicar24-sports</a></h4>
+<div id="httpsgithub.comdwillisnicar25-sports" class="section level4">
+<h4><a href="https://github.com/dwillis/nicar25-sports" class="uri">https://github.com/dwillis/nicar25-sports</a></h4>
 <p>Some of the best sports data stories start with a good question. How
 about this one: which teams benefit the most from home-court
 officiating?</p>
 <p>First, we’ll load the tidyverse.</p>
 <pre class="r"><code>library(tidyverse)</code></pre>
 <pre><code>## ── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
-## ✔ dplyr     1.1.0     ✔ readr     2.1.4
-## ✔ forcats   1.0.0     ✔ stringr   1.5.0
-## ✔ ggplot2   3.4.1     ✔ tibble    3.1.8
-## ✔ lubridate 1.9.2     ✔ tidyr     1.3.0
-## ✔ purrr     1.0.1     
+## ✔ dplyr     1.1.4     ✔ readr     2.1.5
+## ✔ forcats   1.0.0     ✔ stringr   1.5.1
+## ✔ ggplot2   3.5.1     ✔ tibble    3.2.1
+## ✔ lubridate 1.9.4     ✔ tidyr     1.3.1
+## ✔ purrr     1.0.2     
 ## ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
 ## ✖ dplyr::filter() masks stats::filter()
 ## ✖ dplyr::lag()    masks stats::lag()
-## ℹ Use the ]8;;http://conflicted.r-lib.org/conflicted package]8;; to force all conflicts to become errors</code></pre>
+## ℹ Use the conflicted package (&lt;http://conflicted.r-lib.org/&gt;) to force all conflicts to become errors</code></pre>
 <p>Our data is game-level records from the 2017-18 season through last
 week. After loading it, we’ll want to add columns to measure the foul
 differential between the two teams, and I’ll through in steal
@@ -504,7 +501,7 @@ past seven seasons?</h3>
 ##  8 Connecticut         6
 ##  9 Drake               6
 ## 10 Gonzaga             6
-## # … with 242 more rows</code></pre>
+## # ℹ 242 more rows</code></pre>
 </div>
 <div id="teams-that-are-good-at-this---are-they-alike-yes-except-south-carolina-and-western-illinois." class="section level3">
 <h3>Teams that are good at this - are they alike? Yes, except South
@@ -527,7 +524,7 @@ Carolina and Western Illinois.</h3>
 ##  8 Texas A&amp;M-Corpus Christi -0.515  -3.81 -3.29
 ##  9 Western Illinois         -2.06   -5.31 -3.25
 ## 10 Baylor                   -0.721  -3.95 -3.22
-## # … with 79 more rows</code></pre>
+## # ℹ 79 more rows</code></pre>
 </div>
 <div id="drilling-down-into-game-level-data-for-west-virginia" class="section level3">
 <h3>Drilling down into game-level data for West Virginia</h3>
@@ -545,7 +542,7 @@ Carolina and Western Illinois.</h3>
 ##  8 2023-2024 2024-01-03 Cincinnati   W            -1         11            -7
 ##  9 2023-2024 2023-12-21 Niagara      W           -11         11           -10
 ## 10 2023-2024 2023-12-18 Wright State W            -9          4           -10
-## # … with 115 more rows</code></pre>
+## # ℹ 115 more rows</code></pre>
 </div>
 </div>
 </div>
