@@ -1,0 +1,87 @@
+## Where High School Girls Aren't Playing Basketball
+### NFHS Participation Data
+
+```{r}
+library(tidyverse)
+library(janitor)
+```
+
+
+```{r}
+volleyball <- read_csv("volleyball.csv") |> clean_names() |> mutate(year = substring(year,6,10))
+
+basketball <- read_csv("basketball.csv") |> clean_names() |> mutate(year = substring(year,6,10))
+```
+
+
+```{r}
+vb_total <- volleyball |> 
+  group_by(year) |> 
+  summarize(total = sum(girls_participation))
+
+vb_total |> 
+  ggplot() +
+  geom_line(aes(x=year, y=total))
+
+bb_total <- basketball |> 
+  group_by(year) |> 
+  summarize(total = sum(girls_participation))
+
+bb_total |> 
+  ggplot() +
+  geom_point(aes(x=year, y=total))
+```
+
+```{r}
+basketball |> 
+  filter(year > 2017) |> 
+  ggplot(aes(x=year, y=girls_participation, group=state)) +
+  geom_line() +
+  facet_wrap(~state)
+```
+
+```{r}
+volleyball |> 
+  filter(year > 2017) |> 
+  ggplot(aes(x=year, y=girls_participation, group=state)) +
+  geom_line() +
+  facet_wrap(~state)
+```
+Change since 2019
+
+```{r}
+bb_change <- basketball |> 
+  select(year, state, girls_participation) |> 
+  filter(year %in% c(2019, 2024)) |> 
+  pivot_wider(names_from = year, names_prefix = "bbtotal_", values_from = girls_participation) |> 
+  mutate(bbpct_change = (bbtotal_2024-bbtotal_2019)/bbtotal_2019 * 100) |> 
+  arrange(bbpct_change)
+```
+
+```{r}
+vb_change <- volleyball |> 
+  select(year, state, girls_participation) |> 
+  filter(year %in% c(2019, 2024)) |> 
+  pivot_wider(names_from = year, names_prefix = "vbtotal_", values_from = girls_participation) |> 
+  mutate(vbpct_change = (vbtotal_2024-vbtotal_2019)/vbtotal_2019 * 100) |> 
+  arrange(desc(vbpct_change))
+```
+
+
+```{r}
+combined_change <- bb_change |> inner_join(vb_change, join_by(state))
+
+combined_change |> 
+  ggplot(aes(x=vbpct_change, y=bbpct_change)) +
+  geom_point()
+
+```
+
+```{r}
+combined_change |> summarise(correlation = cor(vbpct_change, bbpct_change))
+
+
+fit <- lm(vbpct_change ~ bbpct_change, data = combined_change)
+summary(fit)
+```
+

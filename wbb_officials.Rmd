@@ -1,0 +1,96 @@
+# WBB Officials Analysis
+### IRE 2025
+#### Derek Willis
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+officials_data <- read_csv("official_comparison.csv")
+```
+
+
+#### Home Court Advantage
+
+Is the difference between the average number of fouls called on the home team and on the visiting team real? A paired t-test will help answer that.
+
+```{r}
+paired_t_test <- t.test(officials_data$avg_home_fouls, 
+                       officials_data$avg_visitor_fouls, 
+                       paired = TRUE)
+
+cat("Paired t-test (Home vs Visitor fouls):\n")
+cat("t-statistic:", round(paired_t_test$statistic, 4), "\n")
+cat("p-value:", format(paired_t_test$p.value, scientific = TRUE), "\n")
+cat("95% CI for difference:", round(paired_t_test$conf.int, 4), "\n")
+cat("Mean difference:", round(paired_t_test$estimate, 4), "\n")
+```
+Yeah, it's real. On average, visitors get called for 0.58 more fouls per game than home teams. Seems small, right? In a 30-game season, a team playing 15 road games would face approximately 8.7 extra foul calls just due to this effect.
+
+
+
+```{r}
+officials_data %>%
+  select(official, avg_home_fouls, avg_visitor_fouls) %>%
+  pivot_longer(cols = c(avg_home_fouls, avg_visitor_fouls), 
+               names_to = "foul_type", 
+               values_to = "avg_fouls") %>%
+  mutate(foul_type = str_replace(foul_type, "avg_", "") %>% 
+                     str_replace("_fouls", "") %>% 
+                     str_to_title()) %>%
+  ggplot(aes(x = foul_type, y = avg_fouls, fill = foul_type)) +
+  geom_boxplot(alpha = 0.7) +
+  geom_jitter(width = 0.2, alpha = 0.6) +
+  scale_fill_manual(values = c("Home" = "#FF6B6B", "Visitor" = "#4ECDC4")) +
+  labs(title = "Distribution of Average Fouls: Home vs Visitor",
+       x = "Team Type", 
+       y = "Average Fouls per Game",
+       fill = "Team Type") +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+#### Games Worked and Standard Deviation
+
+Do refs who work fewer games have more variability in foul calls? Nope.
+
+```{r}
+model <- lm(games_worked ~ std_fouls, data=officials_data)
+summary(model)
+```
+```{r}
+
+officials_bias_stats <- officials_data %>%
+  select(official, avg_home_fouls, avg_visitor_fouls, home_visitor_diff, games_worked) %>%
+  arrange(desc(abs(home_visitor_diff))) %>%
+  mutate(
+    bias_direction = case_when(
+      home_visitor_diff > 0.5 ~ "Visitor Bias",
+      home_visitor_diff < -0.5 ~ "Home Bias", 
+      TRUE ~ "Neutral"
+    ),
+    bias_magnitude = case_when(
+      abs(home_visitor_diff) > 1.0 ~ "Strong",
+      abs(home_visitor_diff) > 0.5 ~ "Moderate",
+      TRUE ~ "Weak"
+    )
+  )
+
+officials_bias_stats %>%
+  slice_head(n = 15) %>%  # Top 15 most biased officials
+  ggplot(aes(x = reorder(official, abs(home_visitor_diff)), 
+             y = home_visitor_diff,
+             fill = bias_direction)) +
+  geom_col() +
+  coord_flip() +
+  scale_fill_manual(values = c("Home Bias" = "#FF6B6B", 
+                              "Visitor Bias" = "#4ECDC4",
+                              "Neutral" = "#95A5A6")) +
+  labs(title = "Top 15 Officials by Bias Magnitude",
+       x = "Official",
+       y = "Home - Visitor Foul Difference",
+       fill = "Bias Type") +
+  theme_minimal()
+```
+
