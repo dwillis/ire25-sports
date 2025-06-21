@@ -14,7 +14,7 @@ If you have a GitHub account, you can fork this repository to make your own copy
 -   [Sports Data Analysis and Visualization](https://www.thescoop.org/sports/)
 -   [Using R Packages to get data](https://www.thescoop.org/sports/usingpackages.html)
 
-## Exploration: The Fall of Girls Basketball (and Rise of Volleyball)
+## The Fall of Girls Basketball (and Rise of Volleyball)
 
 The past five years has seen an explosion in the popularity of women's basketball: athletes like Aja Wilson, Caitlin Clark, Breanna Stewart, Angel Reese and Paige Bueckers have become internationally famous. You might think that would coincide with an upsurge in girls playing high school basketball. That's not what the data says, and it suggests some potential stories that you could localize. We'll use high school participation data from the National Federation of High School Associations to compare basketball and volleyball, both nationally and on a state-by-state basis. Open the `nfhs.Rmd` notebook in this repository to get started.
 
@@ -32,4 +32,4 @@ In this repository you'll find a notebook called `nba_two_minutes.Rmd`. Click on
 
 -   [College Basketball Referee Logs](https://blessyourchart.shinyapps.io/cbb-ref-logs/)
 
-In this exercise, we'll load data on foul calls during women's college basketball games from the 2024-25 season, along with information on which officials worked each game. We don't have details on which official made which call, so this analysis isn't as specific as it could be. But using averages, we can try to identify officials who seem to be a part of crews that call a lot of fouls. We also can look at officials who work (and thus travel) a lot.
+In this exercise, we'll load data from women's college basketball games from the 2024-25 season, including information on which officials worked each game. Let's start with the `wbb_officials.Rmd` notebook. Then we'll turn towards foul calls, using the `wbb_fouls.Rmd` notebook.
