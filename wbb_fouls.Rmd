@@ -1,0 +1,346 @@
+# Women's Basketball Officiating Analysis
+### Derek Willis
+### IRE 2025 - Storyball: Finding Ideas in Sports Data
+
+## Setup
+
+Load the required packages and data:
+
+```{r setup, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(knitr)
+
+# Load the data
+wbb_data <- read_csv("wbblogs.csv")
+
+# Quick look at the data structure
+glimpse(wbb_data)
+```
+
+## Understanding Fouls in the Data
+
+We have two foul metrics:
+- `TeamPersonalFouls`: fouls called against the team
+- `OpponentPersonalFouls`: fouls called against opponents
+
+```{r data_check}
+# Check for missing values in foul columns
+wbb_data |> 
+  summarize(
+    team_fouls_missing = sum(is.na(TeamPersonalFouls)),
+    opponent_fouls_missing = sum(is.na(OpponentPersonalFouls)),
+    total_games = n()
+  )
+```
+
+## Fouls by Conference
+
+Which conferences have different officiating patterns?
+
+```{r conference_fouls}
+conference_fouls <- wbb_data |> 
+  group_by(Conference) |> 
+  summarize(
+    games = n(),
+    avg_team_fouls = round(mean(TeamPersonalFouls, na.rm = TRUE), 1),
+    avg_opponent_fouls = round(mean(OpponentPersonalFouls, na.rm = TRUE), 1),
+    .groups = "drop"
+  ) |> 
+  mutate(
+    foul_differential = avg_team_fouls - avg_opponent_fouls,
+    total_avg_fouls = avg_team_fouls + avg_opponent_fouls
+  ) |> 
+  arrange(desc(total_avg_fouls))
+
+# Show top 15 conferences by total fouls per game
+conference_fouls |> 
+  head(15) |> 
+  kable(caption = "Conferences with Most Fouls Called Per Game")
+```
+
+#### What should we make of these results? What do the top two conferences have in common?
+
+
+```{r conference_discipline}
+# Which conferences have the biggest foul differentials?
+conference_fouls |> 
+  arrange(desc(abs(foul_differential))) |> 
+  head(15) |> 
+  select(Conference, games, avg_team_fouls, avg_opponent_fouls, foul_differential) |> 
+  kable(caption = "Biggest Officiating Imbalances by Conference")
+```
+
+```{r conference_low_fouls}
+# Conferences with fewest fouls called
+conference_fouls |> 
+  arrange(total_avg_fouls) |> 
+  head(10) |> 
+  select(Conference, games, total_avg_fouls, avg_team_fouls, avg_opponent_fouls) |> 
+  kable(caption = "Conferences with Fewest Fouls Called")
+```
+
+## Team-Level Officiating Patterns
+
+Find teams that consistently see different foul calling:
+
+```{r team_fouls}
+team_fouls <- wbb_data |> 
+  group_by(Team, Conference) |> 
+  summarize(
+    games = n(),
+    avg_fouls_against_team = round(mean(TeamPersonalFouls, na.rm = TRUE), 1),
+    avg_fouls_against_opponent = round(mean(OpponentPersonalFouls, na.rm = TRUE), 1),
+    conference = first(Conference),
+    .groups = "drop"
+  ) |> 
+  filter(games >= 10) |>  # Only teams with substantial game counts
+  mutate(
+    foul_differential = avg_fouls_against_team - avg_fouls_against_opponent,
+    total_fouls = avg_fouls_against_team + avg_fouls_against_opponent
+  )
+
+# Teams with most fouls called against them
+team_fouls |> 
+  arrange(desc(avg_fouls_against_team)) |> 
+  head(15) |> 
+  select(Team, Conference, games, avg_fouls_against_team) |> 
+  kable(caption = "Teams With Most Fouls Called Against Them")
+```
+
+```{r fewest_fouls}
+# Teams with fewest fouls called against them
+team_fouls |> 
+  arrange(avg_fouls_against_team) |> 
+  head(15) |> 
+  select(Team, Conference, games, avg_fouls_against_team) |> 
+  kable(caption = "Teams With Fewest Fouls Called Against Them")
+```
+
+```{r officiating_advantage}
+# Teams that get the most favorable officiating (big negative differential)
+team_fouls |> 
+  arrange(foul_differential) |> 
+  head(15) |> 
+  select(Team, Conference, games, avg_fouls_against_team, avg_fouls_against_opponent, foul_differential) |> 
+  kable(caption = "Teams With Most Favorable Foul Differential")
+```
+
+```{r officiating_disadvantage}
+# Teams that get the least favorable officiating (big positive differential)
+team_fouls |> 
+  arrange(desc(foul_differential)) |> 
+  head(15) |> 
+  select(Team, Conference, games, avg_fouls_against_team, avg_fouls_against_opponent, foul_differential) |> 
+  kable(caption = "Teams With Least Favorable Foul Differential")
+```
+
+## HBCU Officiating Analysis
+
+Do officials call games differently for HBCUs?
+
+```{r hbcu_fouls}
+hbcu_fouls <- wbb_data |> 
+  group_by(hbcu) |> 
+  summarize(
+    games = n(),
+    teams = n_distinct(Team),
+    avg_fouls_against_team = round(mean(TeamPersonalFouls, na.rm = TRUE), 1),
+    avg_fouls_against_opponent = round(mean(OpponentPersonalFouls, na.rm = TRUE), 1),
+    .groups = "drop"
+  ) |> 
+  mutate(
+    foul_differential = avg_fouls_against_team - avg_fouls_against_opponent,
+    total_fouls_per_game = avg_fouls_against_team + avg_fouls_against_opponent
+  )
+
+hbcu_fouls |> 
+  kable(caption = "Officiating Patterns: HBCU vs Non-HBCU")
+```
+
+**Key question**: Are HBCUs getting different treatment from officials?
+
+```{r hbcu_detailed}
+# Break down by individual HBCU teams
+hbcu_teams <- wbb_data |> 
+  filter(hbcu == TRUE) |> 
+  group_by(Team, Conference) |> 
+  summarize(
+    games = n(),
+    avg_fouls_against_team = round(mean(TeamPersonalFouls, na.rm = TRUE), 1),
+    avg_fouls_against_opponent = round(mean(OpponentPersonalFouls, na.rm = TRUE), 1),
+    .groups = "drop"
+  ) |> 
+  filter(games >= 10) |> 
+  mutate(foul_differential = avg_fouls_against_team - avg_fouls_against_opponent) |> 
+  arrange(desc(abs(foul_differential)))
+
+hbcu_teams |> 
+  head(20) |> 
+  kable(caption = "HBCU Teams with Largest Officiating Differentials")
+```
+
+```{r hbcu_vs_conference}
+# Compare HBCUs to their conference averages
+hbcu_conference_comparison <- wbb_data |> 
+  filter(hbcu == TRUE) |> 
+  group_by(Team, Conference) |> 
+  summarize(
+    games = n(),
+    team_avg_fouls = round(mean(TeamPersonalFouls, na.rm = TRUE), 1),
+    team_opp_fouls = round(mean(OpponentPersonalFouls, na.rm = TRUE), 1),
+    .groups = "drop"
+  ) |> 
+  filter(games >= 10) |> 
+  left_join(conference_fouls, by = "Conference", suffix = c("", "_conf")) |> 
+  mutate(
+    fouls_vs_conf_avg = team_avg_fouls - avg_team_fouls,
+    opp_fouls_vs_conf_avg = team_opp_fouls - avg_opponent_fouls
+  ) |> 
+  select(Team, Conference, games, team_avg_fouls, avg_team_fouls, fouls_vs_conf_avg, 
+         team_opp_fouls, avg_opponent_fouls, opp_fouls_vs_conf_avg)
+
+hbcu_conference_comparison |> 
+  arrange(desc(abs(fouls_vs_conf_avg))) |> 
+  head(15) |> 
+  kable(caption = "How HBCU Teams Compare to Conference Averages")
+```
+
+## Home vs Away Officiating
+
+Do officials favor home teams in foul calling?
+
+```{r home_away}
+home_away_fouls <- wbb_data |> 
+  group_by(HomeAway) |> 
+  summarize(
+    games = n(),
+    avg_fouls_against_team = round(mean(TeamPersonalFouls, na.rm = TRUE), 1),
+    avg_fouls_against_opponent = round(mean(OpponentPersonalFouls, na.rm = TRUE), 1),
+    .groups = "drop"
+  ) |> 
+  mutate(foul_differential = avg_fouls_against_team - avg_fouls_against_opponent)
+
+home_away_fouls |> 
+  kable(caption = "Home Court Advantage in Officiating")
+```
+
+```{r home_away_by_conference}
+# Home court advantage by conference
+home_court_by_conf <- wbb_data |> 
+  group_by(Conference, HomeAway) |> 
+  summarize(
+    games = n(),
+    avg_fouls_against_team = round(mean(TeamPersonalFouls, na.rm = TRUE), 1),
+    avg_fouls_against_opponent = round(mean(OpponentPersonalFouls, na.rm = TRUE), 1),
+    .groups = "drop"
+  ) |> 
+  mutate(foul_differential = avg_fouls_against_team - avg_fouls_against_opponent) |> 
+  pivot_wider(names_from = HomeAway, values_from = c(games, avg_fouls_against_team, 
+                                                     avg_fouls_against_opponent, foul_differential)) |> 
+  mutate(
+    home_advantage = foul_differential_Away - foul_differential_Home
+  ) |> 
+  arrange(desc(home_advantage))
+
+home_court_by_conf |> 
+  head(15) |> 
+  select(Conference, home_advantage, foul_differential_Home, foul_differential_Away) |> 
+  kable(caption = "Biggest Home Court Advantages in Officiating by Conference")
+```
+
+## Win/Loss Impact
+
+Does officiating correlate with game outcomes?
+
+```{r win_loss_fouls}
+win_loss_fouls <- wbb_data |> 
+  group_by(W_L) |> 
+  summarize(
+    games = n(),
+    avg_fouls_against_team = round(mean(TeamPersonalFouls, na.rm = TRUE), 1),
+    avg_fouls_against_opponent = round(mean(OpponentPersonalFouls, na.rm = TRUE), 1),
+    .groups = "drop"
+  ) |> 
+  mutate(foul_differential = avg_fouls_against_team - avg_fouls_against_opponent)
+
+win_loss_fouls |> 
+  kable(caption = "Foul Calling Patterns in Wins vs Losses")
+```
+
+```{r extreme_foul_games}
+# Games with extreme foul differentials
+extreme_fouls <- wbb_data |> 
+  mutate(
+    foul_diff = TeamPersonalFouls - OpponentPersonalFouls,
+    abs_foul_diff = abs(foul_diff)
+  ) |> 
+  filter(abs_foul_diff >= 15) |> 
+  arrange(desc(abs_foul_diff)) |> 
+  select(Date, Team, Opponent, HomeAway, W_L, TeamPersonalFouls, OpponentPersonalFouls, 
+         foul_diff, Conference, hbcu)
+
+extreme_fouls |> 
+  head(20) |> 
+  kable(caption = "Games with Extreme Foul Differentials (15+ difference)")
+```
+
+## Season-Long Patterns
+
+Are there trends over time?
+
+```{r season_patterns}
+# Foul patterns by season
+season_fouls <- wbb_data |> 
+  group_by(Season) |> 
+  summarize(
+    games = n(),
+    avg_total_fouls = round(mean(TeamPersonalFouls + OpponentPersonalFouls, na.rm = TRUE), 1),
+    avg_foul_differential = round(mean(abs(TeamPersonalFouls - OpponentPersonalFouls), na.rm = TRUE), 1),
+    games_with_big_diff = sum(abs(TeamPersonalFouls - OpponentPersonalFouls) >= 10, na.rm = TRUE),
+    pct_lopsided = round(100 * games_with_big_diff / games, 1),
+    .groups = "drop"
+  ) |> 
+  arrange(Season)
+
+season_fouls |> 
+  kable(caption = "Officiating Trends by Season")
+```
+
+## Statistical Significance Tests
+
+```{r statistical_tests}
+# Test if HBCU foul differential is significantly different
+hbcu_test <- wbb_data |> 
+  mutate(
+    foul_diff = TeamPersonalFouls - OpponentPersonalFouls,
+    is_hbcu = ifelse(is.na(hbcu), "No", "Yes")  # Convert TRUE/NA to Yes/No
+  ) |> 
+  filter(!is.na(foul_diff))
+
+# Check the levels first
+cat("HBCU levels in data:", unique(hbcu_test$is_hbcu), "\n")
+cat("Count by HBCU status:\n")
+print(table(hbcu_test$is_hbcu))
+
+t_test_result <- t.test(foul_diff ~ is_hbcu, data = hbcu_test)
+
+cat("\nHBCU vs Non-HBCU Foul Differential T-Test:\n")
+cat("HBCU mean foul differential:", round(t_test_result$estimate[2], 3), "\n")
+cat("Non-HBCU mean foul differential:", round(t_test_result$estimate[1], 3), "\n")
+cat("Difference (HBCU - Non-HBCU):", round(t_test_result$estimate[2] - t_test_result$estimate[1], 3), "\n")
+cat("P-value:", round(t_test_result$p.value, 6), "\n")
+cat("95% Confidence Interval:", round(t_test_result$conf.int, 3), "\n")
+
+# Test home court advantage
+home_test <- wbb_data |> 
+  mutate(foul_diff = TeamPersonalFouls - OpponentPersonalFouls) |> 
+  filter(!is.na(foul_diff), HomeAway != "Neutral")
+
+home_t_test <- t.test(foul_diff ~ HomeAway, data = home_test)
+
+cat("\nHome vs Away Foul Differential T-Test:\n")
+cat("Mean difference:", round(home_t_test$estimate[2] - home_t_test$estimate[1], 3), "\n")
+cat("P-value:", round(home_t_test$p.value, 6), "\n")
+```
+
+The results suggest there's a systematic difference in how fouls are distributed in HBCU versus non-HBCU games, with HBCU games showing more uneven foul calling. The question is why.

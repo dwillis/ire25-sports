@@ -1,96 +1,184 @@
-# WBB Officials Analysis
-### IRE 2025
-#### Derek Willis
+# Women's Basketball Officials Analysis
+### Derek Willis
+### IRE 2025 - Storyball: Finding Ideas in Sports Data
+
+Building off the website showing the schedules of NCAA men's college basketball officials, let's take a look at women's basketball officials from the 2024-25 season, focusing on how many days the most active ones worked. The following data has a row for each day an official worked.
 
 ```{r}
 library(tidyverse)
+library(lubridate)
+
+officials <- read_csv("officials_202425.csv") |> mutate(month = month(date), day = day(date))
+
+glimpse(officials)
+
 ```
+### Exploration
+
+Let's start by finding the officials who worked the most games. Bear in mind that this doesn't include some teams' games, so it's not comprehensive, but it does represent most of the NCAA contests last season. How does the result compare with the [top men's officials](https://blessyourchart.shinyapps.io/cbb-ref-logs/)? What about the total number of women's referees compared to the men's?
 
 ```{r}
-officials_data <- read_csv("official_comparison.csv")
+officials |> 
+  group_by(official) |> 
+  summarize(games = n()) |> 
+  arrange(desc(games))
 ```
 
-
-#### Home Court Advantage
-
-Is the difference between the average number of fouls called on the home team and on the visiting team real? A paired t-test will help answer that.
+Let's do some descriptive statistics:
 
 ```{r}
-paired_t_test <- t.test(officials_data$avg_home_fouls, 
-                       officials_data$avg_visitor_fouls, 
-                       paired = TRUE)
+ref_counts <- officials |> 
+  group_by(official) |> 
+  summarize(games = n())
 
-cat("Paired t-test (Home vs Visitor fouls):\n")
-cat("t-statistic:", round(paired_t_test$statistic, 4), "\n")
-cat("p-value:", format(paired_t_test$p.value, scientific = TRUE), "\n")
-cat("95% CI for difference:", round(paired_t_test$conf.int, 4), "\n")
-cat("Mean difference:", round(paired_t_test$estimate, 4), "\n")
-```
-Yeah, it's real. On average, visitors get called for 0.58 more fouls per game than home teams. Seems small, right? In a 30-game season, a team playing 15 road games would face approximately 8.7 extra foul calls just due to this effect.
-
-
-
-```{r}
-officials_data %>%
-  select(official, avg_home_fouls, avg_visitor_fouls) %>%
-  pivot_longer(cols = c(avg_home_fouls, avg_visitor_fouls), 
-               names_to = "foul_type", 
-               values_to = "avg_fouls") %>%
-  mutate(foul_type = str_replace(foul_type, "avg_", "") %>% 
-                     str_replace("_fouls", "") %>% 
-                     str_to_title()) %>%
-  ggplot(aes(x = foul_type, y = avg_fouls, fill = foul_type)) +
-  geom_boxplot(alpha = 0.7) +
-  geom_jitter(width = 0.2, alpha = 0.6) +
-  scale_fill_manual(values = c("Home" = "#FF6B6B", "Visitor" = "#4ECDC4")) +
-  labs(title = "Distribution of Average Fouls: Home vs Visitor",
-       x = "Team Type", 
-       y = "Average Fouls per Game",
-       fill = "Team Type") +
-  theme_minimal() +
-  theme(legend.position = "none")
-```
-
-#### Games Worked and Standard Deviation
-
-Do refs who work fewer games have more variability in foul calls? Nope.
-
-```{r}
-model <- lm(games_worked ~ std_fouls, data=officials_data)
-summary(model)
-```
-```{r}
-
-officials_bias_stats <- officials_data %>%
-  select(official, avg_home_fouls, avg_visitor_fouls, home_visitor_diff, games_worked) %>%
-  arrange(desc(abs(home_visitor_diff))) %>%
-  mutate(
-    bias_direction = case_when(
-      home_visitor_diff > 0.5 ~ "Visitor Bias",
-      home_visitor_diff < -0.5 ~ "Home Bias", 
-      TRUE ~ "Neutral"
-    ),
-    bias_magnitude = case_when(
-      abs(home_visitor_diff) > 1.0 ~ "Strong",
-      abs(home_visitor_diff) > 0.5 ~ "Moderate",
-      TRUE ~ "Weak"
-    )
+ref_counts |> 
+  summarize(
+    mean = mean(games),
+    median = median(games)
   )
 
-officials_bias_stats %>%
-  slice_head(n = 15) %>%  # Top 15 most biased officials
-  ggplot(aes(x = reorder(official, abs(home_visitor_diff)), 
-             y = home_visitor_diff,
-             fill = bias_direction)) +
-  geom_col() +
-  coord_flip() +
-  scale_fill_manual(values = c("Home Bias" = "#FF6B6B", 
-                              "Visitor Bias" = "#4ECDC4",
-                              "Neutral" = "#95A5A6")) +
-  labs(title = "Top 15 Officials by Bias Magnitude",
-       x = "Official",
-       y = "Home - Visitor Foul Difference",
-       fill = "Bias Type") +
-  theme_minimal()
+```
+Seems like quite a few officials are only calling a small number of games, meaning that a handful of refs are calling a lot of games.
+
+```{r}
+ref_counts |> 
+  ggplot() +
+  geom_histogram(aes(x=games))
 ```
 
+What about the officials with the most active months?
+
+```{r}
+officials |> 
+  group_by(official, month) |> 
+  summarize(games = n()) |> 
+  arrange(desc(games))
+```
+
+John Capolino had a pretty busy November and December, working a combined 41 days in that 62-day span (which often includes holiday tournaments in both months). What about streaks of consecutive days working? I asked my buddy Claude to write R code "that finds the official who worked the longest stretch of consecutive days, and how many times they did that."
+
+```{r}
+# Function to find consecutive date streaks
+find_consecutive_streaks <- function(dates) {
+  if(length(dates) == 0) return(integer(0))
+  
+  # Sort dates
+  sorted_dates <- sort(dates)
+  
+  # Find breaks in consecutive dates
+  date_diffs <- c(1, diff(sorted_dates))
+  break_points <- which(date_diffs > 1)
+  
+  # Calculate streak lengths
+  if(length(break_points) == 0) {
+    # All dates are consecutive
+    return(length(sorted_dates))
+  } else {
+    # Multiple streaks
+    streak_starts <- c(1, break_points)
+    streak_ends <- c(break_points - 1, length(sorted_dates))
+    streak_lengths <- streak_ends - streak_starts + 1
+    return(streak_lengths)
+  }
+}
+
+# Function to analyze consecutive days for all officials
+analyze_consecutive_days <- function(data) {
+  # Convert date column to Date type
+  data$date <- as.Date(data$date)
+  
+  # Get unique dates for each official
+  official_dates <- data |>
+    group_by(official) |>
+    summarise(dates = list(unique(date)), .groups = 'drop')
+  
+  # Calculate streaks for each official
+  results <- official_dates |>
+    rowwise() |>
+    mutate(
+      all_streaks = list(find_consecutive_streaks(dates)),
+      max_streak = ifelse(length(all_streaks) > 0, max(all_streaks), 0),
+      total_days = length(dates),
+      num_streaks = length(all_streaks),
+      times_achieved_max = sum(all_streaks == max_streak)
+    ) |>
+    select(-dates, -all_streaks) |>
+    ungroup()
+  
+  # Find the overall longest streak
+  overall_max <- max(results$max_streak)
+  
+  # Add column indicating if this official has the longest streak
+  results <- results |>
+    mutate(
+      has_longest_streak = max_streak == overall_max,
+      overall_longest_streak = overall_max
+    ) |>
+    arrange(desc(max_streak), desc(times_achieved_max), official)
+  
+  return(results)
+}
+
+# Analyze the data
+results_df <- analyze_consecutive_days(officials)
+
+# Display results
+print("=== Consecutive Days Analysis Results ===")
+print(results_df)
+
+# Summary of officials with longest streak
+longest_streak_officials <- results_df |>
+  filter(has_longest_streak == TRUE) |>
+  select(official, max_streak, times_achieved_max)
+
+cat("\n=== Officials with Longest Consecutive Streak ===\n")
+cat("Longest streak:", max(results_df$max_streak), "days\n\n")
+
+for(i in 1:nrow(longest_streak_officials)) {
+  cat(sprintf("%s: %d consecutive days (achieved %d time%s)\n", 
+              longest_streak_officials$official[i],
+              longest_streak_officials$max_streak[i],
+              longest_streak_officials$times_achieved_max[i],
+              ifelse(longest_streak_officials$times_achieved_max[i] == 1, "", "s")))
+}
+
+# Optional: Create a more detailed dataframe with individual streak information
+create_detailed_streaks <- function(data) {
+  data$date <- as.Date(data$date)
+  
+  detailed_results <- data |>
+    group_by(official) |>
+    summarise(dates = list(unique(sort(date))), .groups = 'drop') |>
+    rowwise() |>
+    mutate(
+      streaks = list(find_consecutive_streaks(dates)),
+      streak_details = list(data.frame(
+        streak_number = seq_along(streaks),
+        streak_length = streaks
+      ))
+    ) |>
+    select(official, streak_details) |>
+    tidyr::unnest(streak_details)
+  
+  return(detailed_results)
+}
+
+# Create detailed streaks dataframe
+detailed_df <- create_detailed_streaks(sample_data)
+
+cat("\n=== Detailed Streaks by Official ===\n")
+print(detailed_df)
+
+# Return the main results dataframe
+results_df
+```
+
+Teresa Stuck, you need a break! Let's see when that 13-day stretch happened.
+
+```{r}
+officials |> 
+  filter(official == 'Teresa Stuck') |> 
+  arrange(date)
+```
+
+So from Nov. 11 through Nov. 23, she worked a game every day, going from Boston to Stony Brook to Washington to Starkville, MS on consecutive days. Here's the potential investigative angle: do those kinds of stretches impact officiating? How could we tell? 

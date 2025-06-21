@@ -1,87 +1,267 @@
-## Where High School Girls Aren't Playing Basketball
-### NFHS Participation Data
+# Where High School Girls Aren't Playing Basketball
+### Derek Willis
+### IRE 2025 - Storyball: Finding Ideas in Sports Data
 
-```{r}
+Sports participation data can tell powerful stories about opportunity, access and changing demographics. The National Federation of State High School Associations (NFHS) tracks participation numbers for every state, every sport, every year - creating a rich dataset for investigative journalists.
+
+This exercise examines patterns in girls' basketball and volleyball participation from 2002 to 2024.
+
+**What stories might we find here?**
+- Which states are losing girls' basketball players?
+- Is volleyball growth coming at basketball's expense?
+- Are there regional patterns that suggest policy or cultural shifts?
+
+Let's dig in.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+```{r load-libraries}
 library(tidyverse)
 library(janitor)
 ```
 
+## Loading and Cleaning the Data
 
-```{r}
-volleyball <- read_csv("volleyball.csv") |> clean_names() |> mutate(year = substring(year,6,10))
+First, we'll load our datasets. The NFHS provides participation data in a consistent format, but we need to extract the final year from their "2018/2019" format to make our analysis cleaner.
 
-basketball <- read_csv("basketball.csv") |> clean_names() |> mutate(year = substring(year,6,10))
+```{r load-data}
+volleyball <- read_csv("volleyball.csv") |> 
+  clean_names() |> 
+  mutate(year = as.numeric(substring(year, 6, 10)))
+
+basketball <- read_csv("basketball.csv") |> 
+  clean_names() |> 
+  mutate(year = as.numeric(substring(year, 6, 10)))
 ```
 
+## The Big Picture: National Trends
 
-```{r}
+Let's start with the 30,000-foot view. How have girls' participation numbers changed nationally over the past two decades?
+
+```{r national-trends}
+# Calculate national totals by year
 vb_total <- volleyball |> 
   group_by(year) |> 
-  summarize(total = sum(girls_participation))
-
-vb_total |> 
-  ggplot() +
-  geom_line(aes(x=year, y=total))
+  summarize(total = sum(girls_participation, na.rm = TRUE))
 
 bb_total <- basketball |> 
   group_by(year) |> 
-  summarize(total = sum(girls_participation))
+  summarize(total = sum(girls_participation, na.rm = TRUE))
 
-bb_total |> 
-  ggplot() +
-  geom_point(aes(x=year, y=total))
+# Plot volleyball trend
+vb_plot <- vb_total |> 
+  ggplot(aes(x = year, y = total)) +
+  geom_line(color = "#2E86C1", size = 1.2) +
+  geom_point(color = "#2E86C1", size = 2) +
+  scale_y_continuous(labels = scales::comma_format()) +
+  labs(title = "Girls' Volleyball Participation: Steady Growth",
+       subtitle = "National totals, 2003-2024",
+       x = "Year", 
+       y = "Total Participants") +
+  theme_minimal()
+
+print(vb_plot)
+
+# Plot basketball trend  
+bb_plot <- bb_total |> 
+  ggplot(aes(x = year, y = total)) +
+  geom_line(color = "#E74C3C", size = 1.2) +
+  geom_point(color = "#E74C3C", size = 2) +
+  scale_y_continuous(labels = scales::comma_format()) +
+  labs(title = "Girls' Basketball Participation: The Pandemic Dip",
+       subtitle = "National totals, 2003-2024",
+       x = "Year", 
+       y = "Total Participants") +
+  theme_minimal()
+
+print(bb_plot)
 ```
 
-```{r}
+**What we're seeing:** Volleyball has grown steadily, while basketball participation dropped significantly during the pandemic years and hasn't fully recovered. This raises questions: Why did basketball suffer more? Are the same girls switching sports, or are fewer girls playing sports overall?
+
+## State-by-State: The Small Multiples Approach
+
+Looking at national trends is useful, but the real stories are often at the state level. Let's create "small multiples" - a grid of charts showing each state's trend.
+
+```{r state-trends-basketball}
 basketball |> 
-  filter(year > 2017) |> 
-  ggplot(aes(x=year, y=girls_participation, group=state)) +
-  geom_line() +
-  facet_wrap(~state)
+  filter(year >= 2018) |> 
+  ggplot(aes(x = year, y = girls_participation, group = state)) +
+  geom_line(color = "#E74C3C", alpha = 0.8) +
+  geom_point(color = "#E74C3C", size = 0.8) +
+  facet_wrap(~state, scales = "free_y") +
+  scale_y_continuous(labels = scales::comma_format()) +
+  labs(title = "Girls' Basketball by State: 2018-2024",
+       subtitle = "Most states show consistent declines",
+       x = "Year", 
+       y = "Participants") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        strip.text = element_text(size = 8))
 ```
 
-```{r}
+```{r state-trends-volleyball}
 volleyball |> 
-  filter(year > 2017) |> 
-  ggplot(aes(x=year, y=girls_participation, group=state)) +
-  geom_line() +
-  facet_wrap(~state)
+  filter(year >= 2018) |> 
+  ggplot(aes(x = year, y = girls_participation, group = state)) +
+  geom_line(color = "#2E86C1", alpha = 0.8) +
+  geom_point(color = "#2E86C1", size = 0.8) +
+  facet_wrap(~state, scales = "free_y") +
+  scale_y_continuous(labels = scales::comma_format()) +
+  labs(title = "Girls' Volleyball by State: 2018-2024",
+       subtitle = "More resilient during pandemic, varied recovery patterns",
+       x = "Year", 
+       y = "Participants") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        strip.text = element_text(size = 8))
 ```
-Change since 2019
 
-```{r}
+**What to look for:** Which states bucked the national trend? Which had the steepest declines? Are there regional patterns? States with unusual patterns often have interesting stories behind the numbers.
+
+## The Pandemic Impact: 2019 vs 2024
+
+Let's quantify the change since just before the pandemic.
+
+```{r pandemic-impact-basketball}
 bb_change <- basketball |> 
   select(year, state, girls_participation) |> 
   filter(year %in% c(2019, 2024)) |> 
-  pivot_wider(names_from = year, names_prefix = "bbtotal_", values_from = girls_participation) |> 
-  mutate(bbpct_change = (bbtotal_2024-bbtotal_2019)/bbtotal_2019 * 100) |> 
-  arrange(bbpct_change)
+  pivot_wider(names_from = year, names_prefix = "bb_", values_from = girls_participation) |> 
+  mutate(
+    bb_raw_change = bb_2024 - bb_2019,
+    bb_pct_change = (bb_2024 - bb_2019) / bb_2019 * 100
+  ) |> 
+  arrange(bb_pct_change)
+
+# Show the biggest losers and gainers
+cat("GIRLS' BASKETBALL: Biggest Percentage Declines (2019-2024)\n")
+bb_change |> 
+  slice_head(n = 10) |> 
+  select(state, bb_2019, bb_2024, bb_pct_change) |> 
+  mutate(bb_pct_change = round(bb_pct_change, 1)) |>
+  knitr::kable()
+
+cat("\nGIRLS' BASKETBALL: Biggest Percentage Gains (2019-2024)\n")
+bb_change |> 
+  slice_tail(n = 5) |> 
+  select(state, bb_2019, bb_2024, bb_pct_change) |> 
+  mutate(bb_pct_change = round(bb_pct_change, 1)) |>
+  knitr::kable()
 ```
 
-```{r}
+```{r pandemic-impact-volleyball}
 vb_change <- volleyball |> 
   select(year, state, girls_participation) |> 
   filter(year %in% c(2019, 2024)) |> 
-  pivot_wider(names_from = year, names_prefix = "vbtotal_", values_from = girls_participation) |> 
-  mutate(vbpct_change = (vbtotal_2024-vbtotal_2019)/vbtotal_2019 * 100) |> 
-  arrange(desc(vbpct_change))
+  pivot_wider(names_from = year, names_prefix = "vb_", values_from = girls_participation) |> 
+  mutate(
+    vb_raw_change = vb_2024 - vb_2019,
+    vb_pct_change = (vb_2024 - vb_2019) / vb_2019 * 100
+  ) |> 
+  arrange(desc(vb_pct_change))
+
+cat("GIRLS' VOLLEYBALL: Biggest Percentage Gains (2019-2024)\n")
+vb_change |> 
+  slice_head(n = 10) |> 
+  select(state, vb_2019, vb_2024, vb_pct_change) |> 
+  mutate(vb_pct_change = round(vb_pct_change, 1)) |>
+  knitr::kable()
 ```
 
+**Story angles:** What's happening in the states with the biggest changes? Are schools cutting basketball programs? Are new volleyball programs starting? Are demographics shifting?
 
-```{r}
-combined_change <- bb_change |> inner_join(vb_change, join_by(state))
+## The Competition Question: Are These Sports Trading Players?
 
+This is where it gets interesting. If volleyball is growing while basketball is shrinking, are they competing for the same athletes?
+
+```{r sports-competition}
+combined_change <- bb_change |> 
+  inner_join(vb_change, by = "state")
+
+# Scatterplot to see the relationship
 combined_change |> 
-  ggplot(aes(x=vbpct_change, y=bbpct_change)) +
-  geom_point()
+  ggplot(aes(x = vb_pct_change, y = bb_pct_change)) +
+  geom_point(alpha = 0.7, size = 3, color = "#8E44AD") +
+  geom_smooth(method = "lm", se = TRUE, color = "#2C3E50") +
+  geom_hline(yintercept = 0, linetype = "dashed", alpha = 0.5) +
+  geom_vline(xintercept = 0, linetype = "dashed", alpha = 0.5) +
+  labs(title = "Are Basketball and Volleyball Competing for Players?",
+       subtitle = "State-level changes, 2019-2024",
+       x = "Volleyball % Change", 
+       y = "Basketball % Change") +
+  theme_minimal()
 
+# Calculate the correlation
+correlation_result <- combined_change |> 
+  summarise(correlation = cor(vb_pct_change, bb_pct_change, use = "complete.obs"))
+
+cat("Correlation between volleyball and basketball changes:", 
+    round(correlation_result$correlation, 3), "\n")
+
+# Statistical test
+correlation_test <- cor.test(combined_change$vb_pct_change, 
+                           combined_change$bb_pct_change)
+
+cat("P-value for correlation test:", 
+    format(correlation_test$p.value, scientific = TRUE), "\n")
 ```
 
-```{r}
-combined_change |> summarise(correlation = cor(vbpct_change, bbpct_change))
+**The analysis:** A negative correlation would suggest that as volleyball grows, basketball shrinks - indicating competition between the sports. A correlation near zero suggests they're independent.
 
+## Linear Regression: Can We Predict Basketball Changes?
 
-fit <- lm(vbpct_change ~ bbpct_change, data = combined_change)
-summary(fit)
+Let's go a step further and see if volleyball growth can actually predict basketball decline in a state.
+
+```{r regression-analysis}
+# Fit the model
+sports_model <- lm(bb_pct_change ~ vb_pct_change, data = combined_change)
+model_summary <- summary(sports_model)
+
+# Display results
+cat("REGRESSION RESULTS: Predicting Basketball Change from Volleyball Change\n")
+cat("====================================================================\n")
+cat("R-squared:", round(model_summary$r.squared, 4), "\n")
+cat("Volleyball coefficient:", round(model_summary$coefficients[2,1], 4), "\n")
+cat("P-value:", format(model_summary$coefficients[2,4], scientific = TRUE), "\n")
+cat("Interpretation: For every 1% increase in volleyball, basketball changes by", 
+    round(model_summary$coefficients[2,1], 3), "percentage points\n")
 ```
 
+## Finding the Outliers: Where the Model Breaks Down
+
+The states that don't fit our model are often the most interesting for journalists. Let's find them.
+
+```{r outlier-analysis}
+# Add predictions and residuals to our data
+combined_change <- combined_change |>
+  mutate(
+    predicted_bb_change = predict(sports_model),
+    residual = bb_pct_change - predicted_bb_change,
+    abs_residual = abs(residual)
+  )
+
+cat("OUTLIER STATES: Where the volleyball-basketball relationship doesn't hold\n")
+cat("=======================================================================\n")
+combined_change |>
+  arrange(desc(abs_residual)) |>
+  slice_head(n = 8) |>
+  select(state, bb_pct_change, vb_pct_change, predicted_bb_change, residual) |>
+  mutate(across(where(is.numeric), ~round(.x, 1))) |>
+  knitr::kable(col.names = c("State", "Basketball Change %", "Volleyball Change %", 
+                            "Predicted BB Change %", "Residual"))
+```
+
+## Reporting Questions to Ask
+
+Based on this analysis, here are the questions you should be asking state high school associations, athletic directors, and coaches:
+
+1. **For states with big basketball declines:** Are schools cutting programs? Are fewer girls trying out? What barriers exist?
+
+2. **For volleyball growth states:** Are these new programs or expanded existing ones? What's driving the popularity?
+
+3. **For outlier states:** What makes your state different? Are there policy changes, demographic shifts, or facility issues at play?
+
+4. **Equity questions:** Which communities within states are most affected? Are rural schools different from urban ones?
